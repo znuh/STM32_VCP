@@ -20,30 +20,26 @@ int main(void) {
     GPIO_Config();
 
     for(;;) {
-        // Turn on PB0, turn off PB1
-        GPIO_SetBits(GPIOB, GPIO_Pin_0);
-        GPIO_ResetBits(GPIOB, GPIO_Pin_1);
+        GPIO_SetBits(GPIOD, GPIO_Pin_7);
         Delay(0xAFFFF);
 
-        // Turn off PB0, turn on PB1
-        GPIO_SetBits(GPIOB, GPIO_Pin_1);
-        GPIO_ResetBits(GPIOB, GPIO_Pin_0);
+        GPIO_ResetBits(GPIOD, GPIO_Pin_7);
         Delay(0xAFFFF);
     }
 }
 
 
 void Delay(volatile unsigned long delay) {
-    for(; delay; --delay );
+    for(; delay; --delay ) { asm("nop"); }
 }
 
 void GPIO_Config() {
     GPIO_InitTypeDef	GPIO_InitStructure;
 
-    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE);
+    RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOD, ENABLE);
 
-    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1;
+    GPIO_InitStructure.GPIO_Pin = GPIO_Pin_7;
     GPIO_InitStructure.GPIO_Speed = GPIO_Speed_10MHz;
     GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
-    GPIO_Init(GPIOB, &GPIO_InitStructure);
+    GPIO_Init(GPIOD, &GPIO_InitStructure);
 }

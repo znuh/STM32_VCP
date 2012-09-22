@@ -1,7 +1,9 @@
 This is a skeleton project for an STM32F10x series device, using the
 GCC compiler (either vanilla or CodeSourcery).
 
-It is initially configured for a medium density STM32F103.
+It is initially configured for a MMstm32F107 module:
+http://www.propox.com/products/t_264.html?lang=en
+
 To change target device, edit:
 	
     stm.ld: update RAM and FLASH sizes in the MEMORY section

@@ -3,8 +3,8 @@
 # Uncomment the appropriate device type and startup file
 #DEVICE_TYPE = STM32F10X_LD
 #STARTUP_FILE = stm32f10x_ld
-DEVICE_TYPE = STM32F10X_MD
-STARTUP_FILE = stm32f10x_md
+#DEVICE_TYPE = STM32F10X_MD
+#STARTUP_FILE = stm32f10x_md
 #DEVICE_TYPE = STM32F10X_HD
 #STARTUP_FILE = stm32f10x_hd
 #DEVICE_TYPE = STM32F10X_LD_VL
@@ -15,11 +15,11 @@ STARTUP_FILE = stm32f10x_md
 #STARTUP_FILE = stm32f10x_hd_vl
 #DEVICE_TYPE = STM32F10X_XL
 #STARTUP_FILE = stm32f10x_xl
-#DEVICE_TYPE = STM32F10X_CL
-#STARTUP_FILE = stm32f10x_cl
+DEVICE_TYPE = STM32F10X_CL
+STARTUP_FILE = stm32f10x_cl
 
 # Set the external clock frequency
-HSE_VALUE = 8000000L
+HSE_VALUE = 25000000L
 
 # Enable debug compilation
 #DEBUG = 1
