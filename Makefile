@@ -36,7 +36,7 @@ FWLIB = lib/STM32F10x_StdPeriph_Driver/libstm32fw.a
 #             (instead of direct register access)
 USE_STDPERIPH_DRIVER = -DUSE_STDPERIPH_DRIVER
 # [OPTIONAL] Uncomment to use the USB library
-#USBLIB = lib/STM32_USB-FS-Device_Driver/libstm32usb.a
+USBLIB = lib/STM32_USB-FS-Device_Driver/libstm32usb.a
 
 # [OPTIONAL] Uncomment to link to maths library libm
 #LIBM = -lm
@@ -53,7 +53,7 @@ INCLUDE_DIRS = -I . -I lib/STM32F10x_StdPeriph_Driver/inc\
 LIBRARY_DIRS = -L lib/STM32F10x_StdPeriph_Driver/\
  -L lib/STM32_USB-FS-Device_Driver
 
-DEFINES = -D$(DEVICE_TYPE) -DHSE_VALUE=$(HSE_VALUE) $(USE_STDPERIPH_DRIVER)
+DEFINES = -D$(DEVICE_TYPE) -DHSE_VALUE=$(HSE_VALUE) $(USE_STDPERIPH_DRIVER) -DUSE_STM3210C_EVAL -DSTM32F10X_CL
 
 export DEFINES
 
