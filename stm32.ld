@@ -1,123 +1,161 @@
 /*
-Default linker script for STM32F10x_128K_20K
-Original Copyright RAISONANCE S.A.S. 2008
-Modified P Harrison May 2009
-*/
-
-/* 
-*	Default stack sizes. 
-* 
-*	These are used by the startup in order to allocate stacks for the different modes.
-*	PROVIDE" allows to easily override these values from an object file or the commmand line.
-*/
-
-__Stack_Size = 1024 ;
-PROVIDE ( _Stack_Size = __Stack_Size ) ;
-__Stack_Init = _estack  - __Stack_Size ;
-PROVIDE ( _Stack_Init = __Stack_Init ) ;
-
-/*
-*There will be a link error if there is not this amount of RAM free at the end.
-*/
-_Minimum_Stack_Size = 0x100 ;
-
+ * GCC linker script for STM32 microcontrollers (ARM Cortex-M).
+ *
+ * It exports the symbols needed for the CMSIS assembler startup script for GCC
+ * ARM toolchains (_sidata, _sdata, _edata, _sbss, _ebss) and sets the entry
+ * point to Reset_Handler.
+ *
+ * Adapt FLASH/RAM size for your particular device below.
+ *
+ * @author Bjørn Forsman
+ */
 
 MEMORY
 {
-	RAM (xrw)     : ORIGIN = 0x20000000, LENGTH =  20K
-    FLASH (rx)    : ORIGIN = 0x08000000, LENGTH = 128K
+    flash (rx) : ORIGIN = 0x08000000, LENGTH = 64K
+    ram  (rwx) : ORIGIN = 0x20000000, LENGTH = 8K
 }
 
-/* higher address of the user mode stack */
-_estack = 0x20005000;
+ENTRY(Reset_Handler)
+
+/*
+ * Reserve memory for heap and stack. The linker will issue an error if there
+ * is not enough memory.
+ *
+ * NOTE: The reserved heap and stack will be added to the bss column of the
+ * binutils size command.
+ */
+_heap_size = 0;    /* required amount of heap  */
+_stack_size = 0;   /* required amount of stack */
+
+/*
+ * The stack starts at the end of RAM and grows downwards. Full-descending
+ * stack; decrement first, then store.
+ */
+_estack = ORIGIN(ram) + LENGTH(ram);
 
 SECTIONS
 {
-	/* 
-	* for Cortex devices, the beginning of the startup code is stored in the .isr_vector section, 
-	* which goes to FLASH 
-	*/
-	.isr_vector :
+    /* Reset and ISR vectors */
+    .isr_vector :
     {
-		. = ALIGN(4);
-		KEEP(*(.isr_vector))            /* Startup code */
-		. = ALIGN(4);
-	} >FLASH
-	
-	/* 
-	* for some STRx devices, the beginning of the startup code is stored in the .flashtext section, 
-	* which goes to FLASH 
-	*/
-	.flashtext :
+        __isr_vector_start__ = .;
+        KEEP(*(.isr_vector)) /* without 'KEEP' the garbage collector discards this section */
+        ASSERT(. != __isr_vector_start__, "The .isr_vector section is empty");
+    } >flash
+
+
+    /* Text section (code and read-only data) */
+    .text :
     {
-		. = ALIGN(4);
-		KEEP (*(.flashtext))           /* Startup code */
-		. = ALIGN(4);
-	} >FLASH
-    
-    /* 
-	* the program code is stored in the .text section, which goes to Flash 
-	*/
-	.text :
-	{
-		. = ALIGN(4);
-		*(.text)                   /* remaining code */
-        *(.text.*)                   /* remaining code */
-        *(.rodata)                 /* read-only data (constants) */
-        *(.rodata*)
-        *(.glue_7)
-        *(.glue_7t)
-		. = ALIGN(4);
-		_etext = .;
-		_sidata = _etext; /* Uused by the startup in order to initialize the .data secion */
-	} >FLASH
-    
-	/* 
-	* This is the initialized data section. It is stored in RAM but the initial values
-	* are held in flash and copied to RAM by the startup code
-	*/   
-	.data  : AT ( _sidata )  /* AT makes the LMA follow on in the binary image */
+        . = ALIGN(4);
+        _stext = .;
+        *(.text*)   /* code */
+        *(.rodata*) /* read only data */
+
+        /*
+         * NOTE: .glue_7 and .glue_7t sections are not needed because Cortex-M
+         * only supports Thumb instructions, no ARM/Thumb interworking.
+         */
+
+        /* Static constructors and destructors */
+        KEEP(*(.init))
+        KEEP(*(.fini))
+
+        . = ALIGN(4);
+        _etext = .;
+    } >flash
+
+    /*
+     * Stack unwinding and exception handling sections.
+     *
+     * ARM compilers emit object files with .ARM.extab and .ARM.exidx sections
+     * when using C++ exceptions. Also, at least GCC emits those sections when
+     * dividing large numbers (64-bit) in C. So we have to handle them.
+     *
+     * (ARM uses .ARM.extab and .ARM.exidx instead of the .eh_frame section
+     * used on x86.)
+     */
+    .ARM.extab : /* exception unwinding information */
     {
-		. = ALIGN(4);
-		_sdata = . ; /* Used by the startup in order to initialize the .data section */
-        KEEP( *(.data) )
-        KEEP( *(.data.*) )
-		. = ALIGN(4);
-		_edata = . ; /* Used by the startup in order to initialize the .data section */
-	} >RAM
-    
-    
-	
-	/* 
-	* This is the uninitialized data section. Date here is stored in RAM and will be
-	* set to zero by the startup code.
-	*/
-	.bss :
+        *(.ARM.extab*)
+    } >flash
+    .ARM.exidx : /* index entries for section unwinding */
     {
-		. = ALIGN(4);
-		_sbss = .; /* Used by the startup in order to initialize the .bss section */
-        *(.bss)
+        *(.ARM.exidx*)
+    } >flash
+
+
+    /*
+     * Newlib and Eglibc (at least) need these for C++ support.
+     *
+     * (Copied from Sourcery CodeBench Lite: arm-none-eabi-gcc -V)
+     */
+    .preinit_array :
+    {
+        PROVIDE_HIDDEN(__preinit_array_start = .);
+        KEEP(*(.preinit_array*))
+        PROVIDE_HIDDEN(__preinit_array_end = .);
+    } >flash
+    .init_array :
+    {
+        PROVIDE_HIDDEN(__init_array_start = .);
+        KEEP(*(SORT(.init_array.*)))
+        KEEP(*(.init_array*))
+        PROVIDE_HIDDEN(__init_array_end = .);
+    } >flash
+    .fini_array :
+    {
+        PROVIDE_HIDDEN(__fini_array_start = .);
+        KEEP(*(SORT(.fini_array.*)))
+        KEEP(*(.fini_array*))
+        PROVIDE_HIDDEN(__fini_array_end = .);
+    } >flash
+
+
+    /*
+     * Initialized data section. This section is programmed into FLASH (LMA
+     * address) and copied to RAM (VMA address) in startup code.
+     */
+    _sidata = .;
+    .data : AT(_sidata) /* LMA address is _sidata (in FLASH) */
+    {
+        . = ALIGN(4);
+        _sdata = .; /* data section VMA address */
+        *(.data*)
+        . = ALIGN(4);
+        _edata = .;
+    } >ram
+
+
+    /* Uninitialized data section (zeroed out by startup code) */
+    .bss :
+    {
+        . = ALIGN(4);
+        _sbss = .;
+        *(.bss*)
         *(COMMON)
         . = ALIGN(4);
-		_ebss = . ; /* Used by the startup in order to initialize the .bss section */
-	} >RAM
-    
-	PROVIDE ( end = _ebss );
-	PROVIDE ( _end = _ebss );
-	
-	/* 
-	* This is the user stack section 
-	* This is just to check that there is enough RAM left for the User mode stack
-	* It should generate an error if it's full.
-	*/
-	._usrstack :
+        _ebss = .;
+    } >ram
+
+
+    /*
+     * Reserve memory for heap and stack. The linker will issue an error if
+     * there is not enough memory.
+     */
+    ._heap :
     {
-		. = ALIGN(4);
-		_susrstack = . ;
-		. = . + _Minimum_Stack_Size ;
-		. = ALIGN(4);
-		_eusrstack = . ;
-	} >RAM
+        . = ALIGN(4);
+        . = . + _heap_size;
+        . = ALIGN(4);
+    } >ram
+    ._stack :
+    {
+        . = ALIGN(4);
+        . = . + _stack_size;
+        . = ALIGN(4);
+    } >ram
     
 	/* 
 	* after that it's only debugging information. 
@@ -139,6 +177,7 @@ SECTIONS
     .stab.index    0 : { *(.stab.index) }
     .stab.indexstr 0 : { *(.stab.indexstr) }
     .comment       0 : { *(.comment) }
+
 	/* 
 	* DWARF debug sections.
 	* Symbols in the DWARF debugging sections are relative to the beginning
@@ -168,3 +207,9 @@ SECTIONS
     .debug_typenames 0 : { *(.debug_typenames) }
     .debug_varnames  0 : { *(.debug_varnames) }
 }
+
+/* Nice to have */
+__isr_vector_size__ = SIZEOF(.isr_vector);
+__text_size__ = SIZEOF(.text);
+__data_size__ = SIZEOF(.data);
+__bss_size__ = SIZEOF(.bss);
